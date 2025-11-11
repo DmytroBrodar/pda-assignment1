@@ -40,7 +40,7 @@ def product_shipping(df):
 
     # remove spaces from text columns
     for col in df.select_dtypes(include='object'):
-        df[col] = df[col].astype(str).str.strip()
+        df[col] = df[col].astype(str).str.strip().str.capitalize()
 
     # select important columns
     product_col = "Item Purchased"
@@ -70,7 +70,7 @@ def product_shipping(df):
 def customer_segments(df):
     # removing extra space
     for col in df.select_dtypes(include='object'):
-        df[col] = df[col].astype(str).str.strip()
+        df[col] = df[col].astype(str).str.strip().str.capitalize()
 
     # convert columns to numeriic values
     df["Purchase Amount (USD)"] = pd.to_numeric(df["Purchase Amount (USD)"], errors='coerce')
@@ -90,26 +90,114 @@ def customer_segments(df):
     df["Segment"] = pd.cut(df["Total Purchased USD"], bins=bins, labels=labels, include_lowest=True)
 
     # group by gender and segment
-    group_counts = df.groupby(["Segment", "Gender"]).size()
+    group_counts = df.groupby(["Segment", "Gender"]).size().unstack()
 
     print("----- Population of each gender ------")
     print(group_counts)
 
+
+    # Replace segment names with numeric ranges 
+    # segment_labels = {
+    #     "Segment 1": "0-500",
+    #     "Segment 2": "500-1000",
+    #     "Segment 3": "1000-1500",
+    #     "Segment 4": "1500-2000",
+    #     "Segment 5": "2000-2500",
+    #     "Segment 6": "2500-3000",
+    #     "Segment 7": "3000-3500",
+    #     "Segment 8": "3500-4000",
+    #     "Segment 9": "4000-4500",
+    #     "Segment 10": "4500-5000",
+    #     "Segment 11": "5000-5500",
+    #     "Segment 12": "5500-6000"
+    # }
+
+    # # update index labels
+    # group_counts.index = group_counts.index.map(segment_labels)
+    # print(group_counts)
+
+
     # visualization
-    vis = group_counts.plot(kind='bar', figsize=(10,8), color=['green', 'blue'])
+    vis = group_counts.plot(kind='bar', figsize=(10,8), color=['green', 'blue']) # green = female, blue = male
     vis.set_title("Customer Segments by gender")
-    vis.set_xlabel("Segments")
+    vis.set_xlabel("Total Purchased USD Range")
     vis.set_ylabel("Number of customers")
-    plt.xticks(rotation=90)
-    plt.tight_layout()
+    vis.legend(title="Gender")
+    plt.xticks(rotation=45)
     plt.show()
+
+
+# -----------------------------------------------------------------------------------
+# Task 3: Product Analysis
+def product_analysis(df):
+    # removing extra space
+    for col in df.select_dtypes(include='object'):
+        df[col] = df[col].astype(str).str.strip().str.capitalize()
+
+    # convert numeric columns
+    df["Age"] = pd.to_numeric(df["Age"], errors='coerce')
+    df["Previous Purchases"] = pd.to_numeric(df["Previous Purchases"], errors='coerce')
+
+    # drop rows with missing important data
+    df = df.dropna(subset=["Age", "Previous Purchases", "Item Purchased"])
+
+    # calculate A and B for every product
+    products = df["Item Purchased"].unique()
+    results = []
+
+    for product in products:
+        sub = df[df["Item Purchased"] == product]
+
+        # average across age groups
+        age_avg = sub.groupby("Age")["Previous Purchases"].mean().round(2)
+        a = age_avg.mean().round(2)
+
+        # overall average 
+        b = sub["Previous Purchases"].mean().round(2)
+
+        results.append((product, a, b ))
+
+    # create data frame of results
+    results_df = pd.DataFrame(results, columns=["Product", "A", "B"])
+    print("----- Averages for product ------")
+    print(results_df)
+
+    # print products where a < b
+    print()
+    print("Products where A < B:")
+    for _, row in results_df.iterrows():
+        if row["A"] < row["B"]:
+            print(f"{row['Product']} (A={row['A']}, B={row['B']})")
+
+    # visualizations
+    x = results_df["Product"]
+    plt.figure(figsize=(10,8))
+
+    plt.bar(x, results_df["A"],width=0.5,label="Average of Age-Group Averages (A)", align='center')
+    plt.bar(x, results_df["B"],width=0.5, label="Overal Average (B)", align='edge')
+
+    plt.title("Comparison of A and B for every product")
+    plt.xlabel("Product")
+    plt.ylabel("Average Previous Purchases")
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.tight_layout()
+
+    plt.show() 
+
+
+
+
 
 # main function
 def main():
+    df = load_data()
     # Task 1
-    # product_shipping(load_data())
+    # product_shipping(df)
     # Task 2
-    customer_segments(load_data())
+    # customer_segments(df)
+    # Task 3
+    product_analysis(df)
 
 
 if __name__ == "__main__":

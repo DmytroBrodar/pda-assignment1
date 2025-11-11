@@ -1,0 +1,27 @@
+Plan how to do
+
+
+Task 1: Analyze relationship between products and shipping types
+Steps:
+1. Clean dataset (remove empty rows, spaces)
+2. Count how many times each shipping type used for each product
+3. Calculate percentages
+4. Print results from most to least popular
+
+
+Task 2: Analyze customers by total purchase value and gender.
+Steps:
+1. Clean data and keep only numeric rows
+2. Create new column Total Purchased USD
+3. Divide customers into 12 segments (based on Table 1)
+4. Visualize counts of Male vs Female in each segment
+5. Print the population of each gender for each segment
+
+Task 3 – Product analysis by previous purchases and age group.
+Steps:
+1. Clean data
+2. For each product, calculate:
+- average of averages per age group
+- overall average of 'Previous Purchases'
+3. Plot A and B for all products
+4. Print products where average < overal
