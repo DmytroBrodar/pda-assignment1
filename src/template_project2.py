@@ -228,8 +228,9 @@ def date_analysis(df):
     print(season_counts)
     
     # visualizations
+    sectionToExplode = (0.05, 0, 0,0)
     plt.figure(figsize=(6,6))
-    season_counts.plot(kind="pie", autopct='%1.1f%%', colors=['red','green','blue','yellow'])
+    season_counts.plot(kind="pie", autopct='%1.1f%%', shadow = True, startangle = 90, explode=sectionToExplode)
     plt.title("Seasonal Popularity (Sales Share)")
     plt.ylabel("")  
     plt.show()
