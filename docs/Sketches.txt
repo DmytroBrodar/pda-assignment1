@@ -25,3 +25,15 @@ Steps:
 - overall average of 'Previous Purchases'
 3. Plot A and B for all products
 4. Print products where average < overal
+
+Task 4 – Date Analysis
+Steps:
+1. Use 'Dates' column to find most popular seasons and months
+2. Visualize season and month popularity
+3. Print top 3 popular months
+4. Create a function that shows sales per year for a given product
+
+
+
+
+when see outliers means use - boxplot visualization
