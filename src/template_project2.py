@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Student Name: Dmytro 
+Student Name: Dmytro Brodar
 Student ID: R00274472
 Cohort/Group/Course: SDH3A 
 """
@@ -16,9 +16,7 @@ import seaborn as sns
 def load_data():
     # get current script directory
     folder = os.path.dirname(__file__)
-    # create full file path
     data_path = os.path.join(folder,"..", "data", "shopping.csv")
-    # convert to absolute path
     data_path = os.path.abspath(data_path)
 
     # read csv file
@@ -27,20 +25,19 @@ def load_data():
     # clean column names, remove extra spaces
     df.columns = df.columns.str.strip()
 
-    # # show column names
-    # print("\n--- Columns in shopping.csv ---")
-    # print(df.columns)
+    # remove spaces from text columns
+    for col in df.select_dtypes(include='object'):
+        df[col] = df[col].str.strip()
 
     return df
 
+df = load_data()
+
+# -----------------------------------------------------------------------------------
 # Task 1: Analyze relationship between products and shipping types 
 def product_shipping(df):
     # remove empty rows
     df = df.dropna(how='all')
-
-    # remove spaces from text columns
-    for col in df.select_dtypes(include='object'):
-        df[col] = df[col].astype(str).str.strip().str.capitalize()
 
     # select important columns
     product_col = "Item Purchased"
@@ -52,10 +49,12 @@ def product_shipping(df):
     # count shipping for each product
     counts = df.groupby([product_col, ship_col]).size().reset_index(name='Count')
 
-    # calculate persentages (divide each shipping count by the total number of orders of that product row by row)
-    counts['Percent'] = (counts['Count'] / counts.groupby(product_col)['Count'].transform('sum') * 100).round()
-
-    # sort and print
+    counts["Percent"] = 0.0
+    for product in counts[product_col].unique():
+        sub_idx = counts[product_col] == product
+        total = counts.loc[sub_idx, "Count"].sum()
+        counts.loc[sub_idx, "Percent"] = (counts.loc[sub_idx, "Count"] / total * 100).round()
+    
     counts = counts.sort_values([product_col, 'Percent'], ascending=[True, False])
 
     # print each product results
@@ -65,84 +64,85 @@ def product_shipping(df):
         for _, row in sub.iterrows():
             print(f" {row[ship_col]} - {row['Percent']}% (amount: {row['Count']})")
 
+# product_shipping(df)
+
 # -----------------------------------------------------------------------------------
 # Task2: customer segments separated by gender
 def customer_segments(df):
-    # removing extra space
-    for col in df.select_dtypes(include='object'):
-        df[col] = df[col].astype(str).str.strip().str.capitalize()
 
-    # convert columns to numeriic values
-    df["Purchase Amount (USD)"] = pd.to_numeric(df["Purchase Amount (USD)"], errors='coerce')
+    # convert numeric columns
+    df["Purchase Amount (USD)"] = pd.to_numeric(df["Purchase Amount (USD)"],  errors='coerce')
     df["Previous Purchases"] = pd.to_numeric(df["Previous Purchases"], errors='coerce')
 
-    # drop rows with missing or wrong values
-    df = df.dropna(subset=["Purchase Amount (USD)", "Previous Purchases", "Gender"])
+    # drop rows with invalid values
+    df= df.dropna(subset=["Purchase Amount (USD)", "Previous Purchases", "Gender"])
 
-    # create new column
+    # new column
     df["Total Purchased USD"] = df["Purchase Amount (USD)"] * df["Previous Purchases"]
 
-    # definr 12 segments (0–500, 500–1000, ...)
-    valid = df["Total Purchased USD"] >= 0
-    df = df[valid].copy()
+    # define segment
+    def get_segment(total):
+        if 0 <= total < 500:
+            return "0-500"
+        elif 500 <= total < 1000:
+            return "500-1000"
+        elif 1000 <= total < 1500:
+            return "1000-1500"
+        elif 1500 <= total < 2000:
+            return "1500-2000"
+        elif 2000 <= total < 2500:
+            return "2000-2500"
+        elif 2500 <= total < 3000:
+            return "2500-3000"
+        elif 3000 <= total < 3500:
+            return "3000-3500"
+        elif 3500 <= total < 4000:
+            return "3500-4000"
+        elif 4000 <= total < 4500:
+            return "4000-4500"
+        elif 4500 <= total < 5000:
+            return "4500-5000"
+        elif 5000 <= total < 5500:
+            return "5000-5500"
+        elif 5500 <= total <= 6000:
+            return "5500-6000"
+        else:
+            return None
+        
+    df["Segment"] = df["Total Purchased USD"].apply(get_segment)
 
-    idx = ((df["Total Purchased USD"] - 1) // 500).astype("int64")
-    idx = idx.clip(lower=0, upper=11)
+    # group by segment and gender
+    group = df.groupby(["Segment", "Gender"]).size().unstack(fill_value = 0)
 
-    # make segment names
-    label_map = {i: f"Segment{i+1}" for i in range(12)}
-    df["Segment"] = idx.map(label_map)
+    # order in correct way
+    order = [
+        "0-500","500-1000","1000-1500","1500-2000","2000-2500","2500-3000",
+        "3000-3500","3500-4000","4000-4500","4500-5000","5000-5500","5500-6000"
+    ]
 
-    # group by gender and segment
-    group_counts = df.groupby(["Segment", "Gender"]).size().unstack(fill_value=0)
+    group = group.reindex(order)
 
-    # dictionary to show numeric ranges
-    segment_labels = {
-        "Segment1": "0-500",
-        "Segment2": "500-1000",
-        "Segment3": "1000-1500",
-        "Segment4": "1500-2000",
-        "Segment5": "2000-2500",
-        "Segment6": "2500-3000",
-        "Segment7": "3000-3500",
-        "Segment8": "3500-4000",
-        "Segment9": "4000-4500",
-        "Segment10": "4500-5000",
-        "Segment11": "5000-5500",
-        "Segment12": "5500-6000"
-    }
-
-    # sort index by numeric part
-    group_counts = group_counts.reindex(sorted(group_counts.index, key=lambda x: int(x.replace("Segment", ""))))
-
-    # print with both segment name and range
-    print("\n--- Segment names with ranges ---")
-    for seg, row in group_counts.iterrows():
-        range_label = segment_labels.get(seg, "Unknown")
+    # print population
+    print("\nPopulation of each gender per segment")
+    for seg, row in group.iterrows():
         female = row.get("Female", 0)
         male = row.get("Male", 0)
-        print(f"{seg} ({range_label}): Female={female}, Male={male}")
-
-    # update index labels
-    group_counts.index = group_counts.index.map(segment_labels)
+        print(f"{seg}: Female={female}, Male={male}")
     
     # visualization
-    vis = group_counts.plot(kind='bar', figsize=(8,6)) 
-    vis.set_title("Customer Segments by gender")
-    vis.set_xlabel("Total Purchased USD Range")
-    vis.set_ylabel("Number of customers")
-    vis.legend(title="Gender")
+    group.plot(kind='bar') 
+    plt.title("Customer Segments by gender")
+    plt.xlabel("Total Purchased USD Range")
+    plt.ylabel("Number of customers")
     plt.tight_layout()
     plt.xticks(rotation=45)
     plt.show()
 
+# customer_segments(df)
 
 # -----------------------------------------------------------------------------------
 # Task 3: Product Analysis
 def product_analysis(df):
-    # removing extra space
-    for col in df.select_dtypes(include='object'):
-        df[col] = df[col].astype(str).str.strip().str.capitalize()
 
     # convert numeric columns
     df["Age"] = pd.to_numeric(df["Age"], errors='coerce')
@@ -195,6 +195,7 @@ def product_analysis(df):
 
     plt.show() 
 
+# product_analysis(df)
 
 # -----------------------------------------------------------------------------------
 # Task 4: DAte Analysis
@@ -295,7 +296,6 @@ def date_analysis(df):
     # ask user to type product name
     # prod_name = input("\nEnter the product name to see its yearly sales: ")
 
-    # call the function
     # product_yearly_sale(prod_name)
 
     # example output
@@ -303,20 +303,46 @@ def date_analysis(df):
     print(f"Example for {sample}")
     product_yearly_sale(sample)
 
+# date_analysis(df)
 
+# -----------------------------------------------------------------------------------
+# Task 5: My analytical task
+# Find which customers age groups are the most loyal based on the previous purchases.
+# I think this can help understand which customers return more often and plan some promotions for them. 
+def customer_loyality(df):
+    # convert columns to numeric
+    df["Age"] = pd.to_numeric(df["Age"], errors='coerce')
+    df["Previous Purchases"] = pd.to_numeric(df["Previous Purchases"])
 
-# main function
-def main():
-    df = load_data()
-    # Task 1
-    # product_shipping(df)
-    # Task 2
-    # customer_segments(df)
-    # Task 3
-    # product_analysis(df)
-    # Task 4
-    date_analysis(df)
+    # drop rows with missing values
+    df = df.dropna(subset=["Age", "Previous Purchases"])
 
+    # make age groups
+    def age_group(age):
+        start = int(age // 10 * 10)
+        end = start + 10
+        return f"{start}-{end}"
 
-if __name__ == "__main__":
-    main()
+    df["Age Groups"] = df["Age"].apply(age_group)
+
+    #  find average prev purchases
+    loyal = df.groupby("Age Groups")["Previous Purchases"].mean().sort_index()
+
+    # print top5 loayal age groups
+    print("Top 5 most loyal age groups:")
+    top5 = loyal.sort_values(ascending=False).head(5)
+    for age, avg in top5.items():
+        print(f"{age}: {avg:.1f} average previous purchase") 
+
+    # visualization
+    plt.figure()
+    loyal.plot(kind="bar")
+    plt.title("Average Previous Purchases by Age Group")
+    plt.xlabel("Age Group")
+    plt.ylabel("Average Previous Purchases")
+    plt.xticks(rotation=0)
+    plt.tight_layout()
+    plt.show()
+
+# customer_loyality(df)
+
