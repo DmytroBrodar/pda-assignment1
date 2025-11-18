@@ -36,35 +36,29 @@ df = load_data()
 # -----------------------------------------------------------------------------------
 # Task 1: Analyze relationship between products and shipping types 
 def product_shipping(df):
-    # remove empty rows
-    df = df.dropna(how='all')
-
-    # select important columns
-    product_col = "Item Purchased"
-    ship_col = "Shipping Type"
-
+ 
     # remove rows with missing values
-    df = df.dropna(subset=[product_col, ship_col])
+    df = df.dropna(subset=["Item Purchased", "Shipping Type"])
 
     # count shipping for each product
-    counts = df.groupby([product_col, ship_col]).size().reset_index(name='Count')
+    counts = df.groupby(["Item Purchased", "Shipping Type"]).size().reset_index(name='Count')
 
     counts["Percent"] = 0.0
-    for product in counts[product_col].unique():
-        sub_idx = counts[product_col] == product
+    for product in counts["Item Purchased"].unique():
+        sub_idx = counts["Item Purchased"] == product
         total = counts.loc[sub_idx, "Count"].sum()
         counts.loc[sub_idx, "Percent"] = (counts.loc[sub_idx, "Count"] / total * 100).round()
     
-    counts = counts.sort_values([product_col, 'Percent'], ascending=[True, False])
+    counts = counts.sort_values(["Item Purchased", 'Percent'], ascending=[True, False])
 
     # print each product results
-    for product in counts[product_col].unique():
+    for product in counts["Item Purchased"].unique():
         print(f"\nProduct: {product}")
-        sub = counts[counts[product_col] == product]
+        sub = counts[counts["Item Purchased"] == product]
         for _, row in sub.iterrows():
-            print(f" {row[ship_col]} - {row['Percent']}% (amount: {row['Count']})")
+            print(f" {row["Shipping Type"]} - {row['Percent']}% (amount: {row['Count']})")
 
-# product_shipping(df)
+product_shipping(df)
 
 # -----------------------------------------------------------------------------------
 # Task2: customer segments separated by gender
@@ -312,7 +306,7 @@ def date_analysis(df):
 def customer_loyality(df):
     # convert columns to numeric
     df["Age"] = pd.to_numeric(df["Age"], errors='coerce')
-    df["Previous Purchases"] = pd.to_numeric(df["Previous Purchases"])
+    df["Previous Purchases"] = pd.to_numeric(df["Previous Purchases"], errors='coerce')
 
     # drop rows with missing values
     df = df.dropna(subset=["Age", "Previous Purchases"])
